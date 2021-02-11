@@ -1,110 +1,104 @@
-const getZombiesByLocationId = (id) => {
-  let r = [];
-  switch (id) {
-    case 1:
-      return [
-        {
-          zombieId: '1',
-          zombieName: 'Z1',
-        },
-        {
-          zombieId: '2',
-          zombieName: 'Z2',
-        },
-        {
-          zombieId: '3',
-          zombieName: 'Z3',
-        },
-        {
-          zombieId: '4',
-          zombieName: 'Z4',
-        },
-        {
-          zombieId: '5',
-          zombieName: 'Z5',
-        },
-        {
-          zombieId: '6',
-          zombieName: 'Z6',
-        },
-      ];
-    case 2:
-      return [
-        {
-          zombieId: '21',
-          zombieName: 'Z21',
-        },
-        {
-          zombieId: '22',
-          zombieName: 'Z22',
-        },
-        {
-          zombieId: '23',
-          zombieName: 'Z23',
-        },
-        {
-          zombieId: '24',
-          zombieName: 'Z24',
-        },
-        {
-          zombieId: '25',
-          zombieName: 'Z25',
-        },
-        {
-          zombieId: '26',
-          zombieName: 'Z26',
-        },
-      ];
-    case 3:
-      return [
-        {
-          zombieId: '30',
-          zombieName: 'Z30',
-        },
-      ];
+const { query } = require('./db');
+
+const getReqParams = (r) => {
+  const d = {};
+  r.params && Object.assign(d, r.params);
+  r.query && Object.assign(d, r.query);
+  r.body && Object.assign(d, r.body);
+  return d;
+};
+
+const queryLocations = async () => {
+  return await query({
+    sql: `select l.id as locationId, l.name as locationName, l.capacity as locationCapacity, count(zl.location_id) as totalLocationZombies from location l
+    left join zombie_location zl on zl.location_id = l.id and zl.is_in = true group by zl.location_id`,
+  });
+};
+
+const getLocations = async (req, res) => {
+  const r = await queryLocations();
+  if (r) {
+    res.json(r);
+  } else {
+    res.json([]);
   }
-  return r;
 };
 
-const getLocations = () => {
-  return [
-    {
-      locationId: 1,
-      locationName: 'Hospital',
-    },
-    {
-      locationId: 2,
-      locationName: 'School',
-    },
-    {
-      locationId: 3,
-      locationName: 'Werehouse',
-    },
-  ];
+const getZombies = async (req, res) => {
+  const r = await query({
+    sql: 'select id, name from zombie',
+  });
+  if (r) {
+    res.json(r);
+  } else {
+    res.json([]);
+  }
 };
 
-const getZombieLocations = () => {
-  return [
-    {
-      locationId: 1,
-      locationName: 'Hospital',
-      zombies: getZombiesByLocationId(1),
-    },
-    {
-      locationId: 2,
-      locationName: 'School',
-      zombies: getZombiesByLocationId(2),
-    },
-    {
-      locationId: 3,
-      locationName: 'Werehouse',
-      zombies: getZombiesByLocationId(3),
-    },
-  ];
+const getZombiesLocation = async (req, res) => {
+  const zombieLocations = await query({
+    sql: `select zl.zombie_id, z.name as zombie_name,  zl.location_id, l.name as location_name, zl.date from zombie_location zl
+    INNER JOIN location l on zl.location_id = l.id
+    INNER JOIN zombie z on zl.zombie_id = z.id
+    where zl.is_in = true`,
+  });
+  const locations = await queryLocations();
+  const assignedZombies = [];
+  for (let i = 0; i < locations.length; i++) {
+    for (let j = 0; j < zombieLocations.length; j++) {
+      if (
+        zombieLocations[j].location_id === locations[i].locationId &&
+        !assignedZombies.includes(zombieLocations[j].zombie_id)
+      ) {
+        assignedZombies.push(zombieLocations[j].zombie_id);
+
+        const zombie = {
+          zombieId: zombieLocations[j].zombie_id,
+          zombieName: zombieLocations[j].zombie_name,
+        };
+
+        if (locations[i].zombies) {
+          locations[i].zombies.push(zombie);
+        } else {
+          locations[i].zombies = [zombie];
+        }
+      }
+    }
+  }
+  if (locations) {
+    res.json(locations);
+  } else {
+    res.json([]);
+  }
+};
+
+const updateZombieLocation = async (req, res) => {
+  const { zombieId, locationId } = getReqParams(req);
+  const clearLocation = await query({
+    sql: `Update zombie_location set is_in = false where zombie_id = ?`,
+    params: [zombieId],
+  });
+  if (clearLocation) {
+    const r = await query({
+      sql: `INSERT INTO zombie_location (location_id, zombie_id, date, is_in) VALUES (?, ?, ?, true)`,
+      params: [locationId, zombieId, new Date().toISOString()],
+    });
+    if (r) {
+      res.status(200);
+      res.json([]);
+    } else {
+      res.status(400);
+      res.json([]);
+    }
+  } else {
+    res.status(400);
+    res.json([]);
+  }
 };
 
 module.exports = {
-  getZombiesByLocationId,
-  getZombieLocations,
+  getZombiesLocation,
   getLocations,
+  getZombies,
+  updateZombieLocation,
 };

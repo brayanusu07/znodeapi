@@ -1,24 +1,25 @@
 const express = require('express');
 const app = express();
+const bodyParser = require('body-parser');
 const {
   getLocations,
-  getZombiesByLocationId,
-  getZombieLocations,
+  getZombies,
+  getZombiesLocation,
+  updateZombieLocation,
 } = require('./source');
 
 const port = process.env.PORT || 80;
 
-app.get('/locations', (req, res) => {
-  res.json(getLocations());
-});
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
 
-app.get('/zombie/locations', (req, res) => {
-  res.json(getZombieLocations());
-});
+app.get('/locations', getLocations);
 
-app.get('/zombie/location/:id', (req, res) => {
-  res.json(getZombiesByLocationId(1));
-});
+app.get('/zombies', getZombies);
+
+app.get('/zombies/location', getZombiesLocation);
+
+app.patch('/zombie/:zombieId/location', updateZombieLocation);
 
 app.listen(port, () => {
   console.log(`Example app listening at http://localhost:${port}`);
