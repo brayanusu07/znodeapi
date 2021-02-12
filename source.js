@@ -45,6 +45,9 @@ const getZombiesLocation = async (req, res) => {
   const locations = await queryLocations();
   const assignedZombies = [];
   for (let i = 0; i < locations.length; i++) {
+    if(!locations[i].zombies){
+      locations[i].zombies = [];
+    }
     for (let j = 0; j < zombieLocations.length; j++) {
       if (
         zombieLocations[j].location_id === locations[i].locationId &&
@@ -57,11 +60,7 @@ const getZombiesLocation = async (req, res) => {
           zombieName: zombieLocations[j].zombie_name,
         };
 
-        if (locations[i].zombies) {
-          locations[i].zombies.push(zombie);
-        } else {
-          locations[i].zombies = [zombie];
-        }
+        locations[i].zombies.push(zombie);
       }
     }
   }
