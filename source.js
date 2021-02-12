@@ -37,7 +37,7 @@ const getZombies = async (req, res) => {
 
 const getZombiesLocation = async (req, res) => {
   const zombieLocations = await query({
-    sql: `select zl.zombie_id, z.name as zombie_name,  zl.location_id, l.name as location_name, zl.date from zombie_location zl
+    sql: `select zl.zombie_id, z.name as zombie_name, z.image as zombie_image, zl.location_id, l.name as location_name, zl.date from zombie_location zl
     INNER JOIN location l on zl.location_id = l.id
     INNER JOIN zombie z on zl.zombie_id = z.id
     where zl.is_in = true`,
@@ -45,7 +45,7 @@ const getZombiesLocation = async (req, res) => {
   const locations = await queryLocations();
   const assignedZombies = [];
   for (let i = 0; i < locations.length; i++) {
-    if(!locations[i].zombies){
+    if (!locations[i].zombies) {
       locations[i].zombies = [];
     }
     for (let j = 0; j < zombieLocations.length; j++) {
@@ -58,6 +58,7 @@ const getZombiesLocation = async (req, res) => {
         const zombie = {
           zombieId: zombieLocations[j].zombie_id,
           zombieName: zombieLocations[j].zombie_name,
+          zombieImage: zombieLocations[j].zombie_image,
         };
 
         locations[i].zombies.push(zombie);
